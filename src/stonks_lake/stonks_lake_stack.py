@@ -40,4 +40,8 @@ class StonksLakeStack(Stack):
             )
         )
 
-        bucket.add_event_notification(s3.EventType.OBJECT_CREATED, aws_s3_notifications.LambdaDestination(function))
+        bucket.add_event_notification(
+            s3.EventType.OBJECT_CREATED,
+            aws_s3_notifications.LambdaDestination(function),
+            s3.NotificationKeyFilter(prefix="raw/")
+        )
