@@ -5,6 +5,8 @@ from io import StringIO
 
 def handler(event, context):
 
+    print(event)
+
     s3_event = event['Records'][0]['s3']
     bucket = s3_event['bucket']['name']
     key = s3_event['object']['key']
@@ -18,7 +20,6 @@ def handler(event, context):
     df = pd.read_csv(StringIO(file_content))
 
     print(df.head())
-    print(event)
 
     return {
         "status_code": 200,
