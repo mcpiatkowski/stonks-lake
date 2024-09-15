@@ -6,17 +6,6 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-inline_code: str = """
-def handler(event, context):
-
-    print(event)
-
-    return {
-        "status_code": 200,
-        "body": event
-    }
-"""
-
 
 class StonksLakeStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
@@ -29,7 +18,7 @@ class StonksLakeStack(Stack):
             id="StonksRawFunction",
             handler="index.handler",
             runtime=lambda_.Runtime.PYTHON_3_12,
-            code=lambda_.Code.from_inline(inline_code),
+            code=lambda_.Code.from_asset("src/lambda/stonks_raw_function")
         )
 
         function.add_layers(

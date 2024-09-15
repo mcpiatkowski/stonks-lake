@@ -1,7 +1,7 @@
 import aws_cdk as cdk
 import os
 
-from stonks_lake.stonks_lake_stack import StonksLakeStack
+from stacks.stonks_lake_stack import StonksLakeStack
 
 app = cdk.App()
 StonksLakeStack(
