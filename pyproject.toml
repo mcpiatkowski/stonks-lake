@@ -7,6 +7,8 @@ authors = [
 ]
 dependencies = [
     "aws-cdk-lib>=2.158.0",
+    "pandas>=2.2.2",
+    "boto3>=1.35.19",
 ]
 requires-python = "==3.12.*"
 readme = "README.md"
