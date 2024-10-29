@@ -1,6 +1,7 @@
 import pandas as pd
 import boto3
-from io import StringIO
+from io import StringIO, BytesIO
+import uuid
 
 
 def handler(event, context):
@@ -18,8 +19,49 @@ def handler(event, context):
     file_content = response['Body'].read().decode('utf-8')
 
     df = pd.read_csv(StringIO(file_content))
+    df["year_month"] = pd.to_datetime(df["Time"], format="mixed").dt.strftime("%Y%m")
 
-    print(df.head())
+    dividends: pd.DataFrame = df[df["Action"].str.contains("dividend", case=False)][[
+        "Action",
+        "Time",
+        "year_month",
+        "Ticker",
+        "Name",
+        "No. of shares",
+        "Price / share",
+        "Currency (Price / share)",
+        "Total",
+        "Currency (Total)",
+        "Withholding tax",
+        "Currency (Withholding tax)",
+        "ISIN"
+    ]].reset_index(drop=True)
+
+    orders: pd.DataFrame = df[df["Action"].isin(["Market buy", "Market sell"])][[
+        "Action",
+        "Time",
+        "year_month",
+        "Ticker",
+        "Name",
+        "No. of shares",
+        "Price / share",
+        "Currency (Price / share)",
+        "Exchange rate",
+        "Result",
+        "Currency (Result)",
+        "Total",
+        "Currency (Total)",
+        "Currency conversion fee",
+        "Currency (Currency conversion fee)",
+        "ID",
+        "ISIN"
+    ]]
+
+    for year_month, group in dividends.groupby("year_month"):
+        buffer = BytesIO()
+        output_key = f"partitioned/dividends/{year_month}/{uuid.uuid4().hex}.parquet"
+        group.to_parquet(buffer, index=False)
+        s3.put_object(Bucket=bucket, Key=output_key, Body=buffer.getvalue())
 
     return {
         "status_code": 200,
