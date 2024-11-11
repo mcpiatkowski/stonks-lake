@@ -10,79 +10,17 @@ from aws_cdk import (
     CfnOutput
 )
 
-lambda_code: str = """
-import json
-import requests
-import boto3
-from botocore.exceptions import ClientError
-
-def get_secret():
-    ssm = boto3.client('ssm')
-    try:
-        parameter = ssm.get_parameter(
-            Name='/financial-modeling-prep/api-key',  # Parameter name in SSM
-            WithDecryption=True
-        )
-        return parameter['Parameter']['Value']
-    except ClientError as e:
-        print(f"Error retrieving API key: {e}")
-        raise
-
-def handler(event, context):
-    status_code = 200
-    array_of_rows_to_return = []
-    BASE_URL = "https://financialmodelingprep.com/api/v3/quote-short"
-
-    try:
-        # Get API key from Parameter Store
-        API_KEY = get_secret()
-        
-        event_body = event["body"]
-        payload = json.loads(event_body)
-        rows = payload["data"]
-
-        for row in rows:
-            row_number = row[0]
-            ticker_symbol = row[1]
-            
-            url = f"{BASE_URL}/{ticker_symbol}?apikey={API_KEY}"
-            response = requests.get(url)
-            
-            if response.status_code == 200:
-                stock_data = response.json()
-                if stock_data:
-                    current_price = stock_data[0]["price"]
-                    output_value = [ticker_symbol, current_price]
-                else:
-                    output_value = [ticker_symbol, "No data found"]
-            else:
-                output_value = [ticker_symbol, f"API Error: {response.status_code}"]
-
-            row_to_return = [row_number, output_value]
-            array_of_rows_to_return.append(row_to_return)
-
-        json_compatible_string_to_return = json.dumps({"data": array_of_rows_to_return})
-
-    except ClientError as e:
-        status_code = 500
-        json_compatible_string_to_return = json.dumps({"error": f"Secret retrieval failed: {str(e)}"})
-    except requests.RequestException as e:
-        status_code = 500
-        json_compatible_string_to_return = json.dumps({"error": f"API request failed: {str(e)}"})
-    except Exception as err:
-        status_code = 400
-        json_compatible_string_to_return = event_body
-
-    return {
-        'statusCode': status_code,
-        'body': json_compatible_string_to_return
-    }
-"""
-
 
 class StonksApiStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
+
+        requests_layer = lambda_.LayerVersion(
+            self, "RequestsLayer",
+            code=lambda_.Code.from_asset("src/lambda/layers/requests-layer.zip"),
+            compatible_runtimes=[lambda_.Runtime.PYTHON_3_11],
+            description="Layer containing requests library"
+        )
 
         lambda_role = iam.Role(
             self, "LambdaExecutionRole",
@@ -115,9 +53,10 @@ class StonksApiStack(Stack):
             self, "ExternalFunctionLambda",
             runtime=lambda_.Runtime.PYTHON_3_11,
             handler="index.handler",
-            code=lambda_.Code.from_inline(lambda_code),
+            code=lambda_.Code.from_asset("src/lambda/snowflake_external_function"),
             role=lambda_role,
-            timeout=Duration.seconds(10)
+            timeout=Duration.seconds(30),
+            layers=[requests_layer]
         )
 
         api = apigateway.RestApi(
