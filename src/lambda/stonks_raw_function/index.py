@@ -6,9 +6,7 @@ from typing import Dict, Any, Tuple
 
 
 def extract_s3_event_details(event: Dict[str, Any]) -> Tuple[str, str]:
-    """
-    Extract bucket name and key from S3 event.
-    """
+    """Extract bucket name and key from S3 event."""
     s3_event = event["Records"][0]["s3"]
     
     return s3_event["bucket"]["name"], s3_event["object"]["key"]
@@ -80,23 +78,35 @@ def extract_orders(df: pd.DataFrame) -> pd.DataFrame:
 
 def extract_dividends(df: pd.DataFrame) -> pd.DataFrame:
     """Extract and transform dividends data from DataFrame."""
-    return df[df["Action"].str.contains("dividend", case=False)][
-        [
-            "Action",
-            "Time",
-            "year_month",
-            "Ticker",
-            "Name",
-            "No. of shares",
-            "Price / share",
-            "Currency (Price / share)",
-            "Total",
-            "Currency (Total)",
-            "Withholding tax",
-            "Currency (Withholding tax)",
-            "ISIN",
-        ]
-    ].reset_index(drop=True)
+
+    column_mapping = {
+        "No. of shares": "number_of_shares",
+        "Price / share": "price_per_share",
+        "Currency (Price / share)": "price_per_share_currency",
+        "Currency (Total)": "total_currency",
+        "Withholding tax": "withholding_tax",
+        "Currency (Withholding tax)": "withholding_tax_currency",
+    }
+
+    dividends = df[df["Action"].str.contains("dividend", case=False)][[
+        "Action",
+        "Time",
+        "year_month",
+        "Ticker",
+        "Name",
+        "No. of shares",
+        "Price / share",
+        "Currency (Price / share)",
+        "Total",
+        "Currency (Total)",
+        "Withholding tax",
+        "Currency (Withholding tax)",
+        "ISIN",
+    ]].rename(columns=column_mapping).reset_index(drop=True)
+
+    dividends.columns = dividends.columns.str.upper()
+
+    return dividends
 
 
 def write_parquet_to_s3(
