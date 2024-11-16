@@ -121,7 +121,7 @@ def write_parquet_to_s3(
 
 def save_monthly_partitions(df: pd.DataFrame, s3_client: boto3.client, bucket: str, base_path: str) -> None:
     """Process DataFrame and write partitioned parquet files to S3."""
-    for year_month, group in df.groupby("year_month"):
+    for year_month, group in df.groupby("YEAR_MONTH"):
         write_parquet_to_s3(group, s3_client, bucket, base_path, year_month)
 
 
@@ -132,13 +132,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     s3_client = boto3.client("s3")
     bucket, key = extract_s3_event_details(event)
 
-    df = read_csv_from_s3(s3_client, bucket, key)
-    df = preprocess_dataframe(df)
+    df: pd.DataFrame = preprocess_dataframe(read_csv_from_s3(s3_client, bucket, key))
 
-    orders = extract_orders(df)
+    orders: pd.DataFrame = extract_orders(df)
     save_monthly_partitions(orders, s3_client, bucket, "partitioned/orders")
 
-    dividends = extract_dividends(df)
+    dividends: pd.DataFrame = extract_dividends(df)
     save_monthly_partitions(dividends, s3_client, bucket, "partitioned/dividends")
 
     return {"status_code": 200, "body": event}
