@@ -9,13 +9,13 @@ log.setLevel(logging.INFO)
 
 
 def get_secret():
-    ssm = boto3.client('ssm')
+    ssm = boto3.client("ssm")
     try:
         parameter = ssm.get_parameter(
-            Name='/financial-modeling-prep/api-key',  # Parameter name in SSM
-            WithDecryption=True
+            Name="/financial-modeling-prep/api-key",  # Parameter name in SSM
+            WithDecryption=True,
         )
-        return parameter['Parameter']['Value']
+        return parameter["Parameter"]["Value"]
     except ClientError as e:
         print(f"Error retrieving API key: {e}")
         raise
@@ -69,7 +69,4 @@ def handler(event, context):
         status_code = 400
         json_compatible_string_to_return = event_body
 
-    return {
-        'statusCode': status_code,
-        'body': json_compatible_string_to_return
-    }
+    return {"statusCode": status_code, "body": json_compatible_string_to_return}

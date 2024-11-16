@@ -1,10 +1,4 @@
-from aws_cdk import (
-    Stack,
-    aws_lambda as lambda_,
-    aws_s3 as s3,
-    aws_s3_notifications,
-    Duration
-)
+from aws_cdk import Stack, aws_lambda as lambda_, aws_s3 as s3, aws_s3_notifications, Duration
 from constructs import Construct
 
 
@@ -21,7 +15,7 @@ class StonksLakeStack(Stack):
             memory_size=256,
             timeout=Duration.seconds(15),
             runtime=lambda_.Runtime.PYTHON_3_12,
-            code=lambda_.Code.from_asset("src/lambda/stonks_raw_function")
+            code=lambda_.Code.from_asset("src/lambda/stonks_raw_function"),
         )
 
         function.add_layers(
@@ -37,5 +31,5 @@ class StonksLakeStack(Stack):
         bucket.add_event_notification(
             s3.EventType.OBJECT_CREATED,
             aws_s3_notifications.LambdaDestination(function),
-            s3.NotificationKeyFilter(prefix="raw/")
+            s3.NotificationKeyFilter(prefix="raw/"),
         )
