@@ -8,7 +8,7 @@ from typing import Dict, Any, Tuple
 def extract_s3_event_details(event: Dict[str, Any]) -> Tuple[str, str]:
     """Extract bucket name and key from S3 event."""
     s3_event = event["Records"][0]["s3"]
-    
+
     return s3_event["bucket"]["name"], s3_event["object"]["key"]
 
 
@@ -16,7 +16,7 @@ def read_csv_from_s3(s3_client: boto3.client, bucket: str, key: str) -> pd.DataF
     """Read CSV file from S3 and return as DataFrame."""
     response = s3_client.get_object(Bucket=bucket, Key=key)
     file_content = response["Body"].read().decode("utf-8")
-    
+
     return pd.read_csv(StringIO(file_content))
 
 
@@ -27,7 +27,7 @@ def preprocess_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df["year_month"] = pd.to_datetime(df["Time"]).dt.strftime("%Y%m")
     df["record_dt"] = pd.to_datetime(df["Time"])
     df["record_date"] = df["record_dt"].dt.date
-    
+
     return df
 
 
@@ -72,7 +72,7 @@ def extract_orders(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     orders.columns = orders.columns.str.upper()
-    
+
     return orders
 
 
@@ -88,21 +88,27 @@ def extract_dividends(df: pd.DataFrame) -> pd.DataFrame:
         "Currency (Withholding tax)": "withholding_tax_currency",
     }
 
-    dividends = df[df["Action"].str.contains("dividend", case=False)][[
-        "Action",
-        "Time",
-        "year_month",
-        "Ticker",
-        "Name",
-        "No. of shares",
-        "Price / share",
-        "Currency (Price / share)",
-        "Total",
-        "Currency (Total)",
-        "Withholding tax",
-        "Currency (Withholding tax)",
-        "ISIN",
-    ]].rename(columns=column_mapping).reset_index(drop=True)
+    dividends = (
+        df[df["Action"].str.contains("dividend", case=False)][
+            [
+                "Action",
+                "Time",
+                "year_month",
+                "Ticker",
+                "Name",
+                "No. of shares",
+                "Price / share",
+                "Currency (Price / share)",
+                "Total",
+                "Currency (Total)",
+                "Withholding tax",
+                "Currency (Withholding tax)",
+                "ISIN",
+            ]
+        ]
+        .rename(columns=column_mapping)
+        .reset_index(drop=True)
+    )
 
     dividends.columns = dividends.columns.str.upper()
 

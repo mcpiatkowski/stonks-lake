@@ -1,4 +1,12 @@
-from aws_cdk import Stack, aws_lambda as lambda_, aws_s3 as s3, aws_s3_notifications, Duration
+from aws_cdk import (
+    Stack,
+    aws_lambda as lambda_,
+    aws_s3 as s3,
+    aws_s3_notifications,
+    aws_iam as iam,
+    Duration,
+    CfnOutput,
+)
 from constructs import Construct
 
 
@@ -33,3 +41,38 @@ class StonksLakeStack(Stack):
             aws_s3_notifications.LambdaDestination(function),
             s3.NotificationKeyFilter(prefix="raw/"),
         )
+
+        snowflake_policy = iam.Policy(
+            self,
+            "SnowflakeS3Policy",
+            statements=[
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=["s3:GetObject", "s3:GetObjectVersion"],
+                    resources=[f"{bucket.bucket_arn}/partitioned/*"],
+                ),
+                iam.PolicyStatement(
+                    effect=iam.Effect.ALLOW,
+                    actions=["s3:ListBucket", "s3:GetBucketLocation"],
+                    resources=[bucket.bucket_arn],
+                    conditions={"StringLike": {"s3:prefix": ["partitioned/*"]}},
+                ),
+            ],
+        )
+
+        snowflake_role = iam.Role(
+            self,
+            "SnowflakeS3Role",
+            # assumed_by=iam.AccountPrincipal(self.account),  # Temporarily use the own account
+            # external_ids=["0000"],  # Placeholder external ID
+            assumed_by=iam.ArnPrincipal("arn:aws:iam::697266982738:user/vldc0000-s"),
+            external_ids=["JL27296_SFCRole=2_6ouv5pdETSL2JzdmNpRJHijTgW0=0"],
+        )
+
+        snowflake_role.attach_inline_policy(snowflake_policy)
+
+        CfnOutput(
+            self, "SnowflakeRoleArn", value=snowflake_role.role_arn, description="ARN of the IAM role for Snowflake"
+        )
+
+        CfnOutput(self, "BucketArn", value=bucket.bucket_arn, description="ARN of the S3 bucket")
